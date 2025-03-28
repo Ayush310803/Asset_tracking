@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Historical Route - Asset {{ asset_id }}</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 600px; }
+        .info-panel { padding: 20px; background: #f5f5f5; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Historical Route for Asset #{{ asset_id }}</h1>
+    <div class="info-panel">
+        <p>Time range: {{ start_time }} to {{ end_time }}</p>
+        <p>Total points: {{ history|length }}</p>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        // Historical data from Jinja
+        const history = "{{ history | tojson }}";
+        
+        // Plot historical route
+        if (history.length > 0) {
+            const coordinates = history.map(point => [point.latitude, point.longitude]);
+            
+            // Create polyline
+            const route = L.polyline(coordinates, {color: 'blue'}).addTo(map);
+            
+            // Add markers
+            L.marker(coordinates[0], {
+                icon: L.divIcon({
+                    className: 'start-marker',
+                    html: '<div style="color: green; font-size: 24px">●</div>'
+                })
+            }).bindPopup(`Start: ${new Date(history[0].timestamp).toLocaleString()}`).addTo(map);
+
+            L.marker(coordinates[coordinates.length - 1], {
+                icon: L.divIcon({
+                    className: 'end-marker',
+                    html: '<div style="color: red; font-size: 24px">●</div>'
+                })
+            }).bindPopup(`End: ${new Date(history[history.length - 1].timestamp).toLocaleString()}`).addTo(map);
+
+            // Fit map to route
+            map.fitBounds(route.getBounds());
+        }
+
+        // Live updates WebSocket
+        const socket = new WebSocket(`ws://${window.location.host}/ws/track/{{ asset_id }}`);
+        const liveMarker = L.marker([0, 0], {
+            icon: L.divIcon({
+                className: 'live-marker',
+                html: '<div style="color: orange; font-size: 24px">●</div>'
+            })
+        }).addTo(map);
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const newPos = [data.latitude, data.longitude];
+            liveMarker.setLatLng(newPos);
+            
+            if (!map.getBounds().contains(newPos)) {
+                map.setView(newPos, 13);
+            }
+        };
+    </script>
+</body>
+</html>
