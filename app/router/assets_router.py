@@ -29,7 +29,7 @@ def create_new_asset(asset: AssetCreate, db: Session = Depends(get_db), current_
     )
 
 @router.get("/assets/", response_model=List[AssetResponse])
-def read_assets(skip: int = 0,limit: int = 100, db: Session = Depends(get_db),current_user: User = Depends(get_current_user)):
+def read_assets(skip: int = 0,limit: int = 100, db: Session = Depends(get_db),current_user: User = Depends(get_current_admin_user)):
     assets = get_assets(db, skip=skip, limit=limit)
     return assets
 

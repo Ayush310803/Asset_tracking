@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Dict
 from app.services.export import FullDataExporter
 from database import get_db_url
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_admin_user
 from app.models.users_model import User
 
 router = APIRouter(prefix="/export", tags=["Export"])
@@ -29,7 +29,7 @@ async def delayed_cleanup(filepath: str, delay: int = 3600):
 @router.post("/full-export")
 async def full_export(
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_admin_user)
 ):
     try:
         exporter = FullDataExporter(db_url=get_db_url(), export_dir=EXPORT_DIR)
